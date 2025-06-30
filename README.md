@@ -1,114 +1,273 @@
-# 🔐 Backdoor AES-256-CBC via OpenSSL + Ncat
+# 🔐 Secure Communication Project — Alby Protect
 
-Servidor TCP escrito em C que recebe comandos criptografados com AES-256-CBC e os executa, retornando a saída ao cliente.
+This project demonstrates a secure communication system between client and server using **hybrid encryption (RSA + AES)** over a raw TCP socket.
 
 ---
 
-## 📌 Português
+## 🔧 Objective
 
-### ⚙️ Como funciona:
-1. Cliente envia um comando criptografado com AES-256-CBC (base64).
-2. Servidor recebe, decifra e executa o comando.
-3. A resposta é enviada de volta via TCP.
+Enable encrypted command execution over TCP using:
 
-### 🔐 Parâmetros:
-- **Chave (KEY):** `00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff`
-- **IV:** `0102030405060708090a0b0c0d0e0f10`
-- **Porta:** `4444`
+- Symmetric encryption (**AES-256-CBC**)
+- Asymmetric encryption (**RSA 2048**)
+- Socket communication
+- JSON messaging
+- OpenSSL + C
 
-### ▶️ Executando o servidor:
+---
+
+## 📦 Requirements
+
+**Install dependencies:**
+
 ```bash
-gcc aes_server.c -o servidor
-./servidor
-```
-
-### 💻 Cliente (Linux):
-```bash
-KEY="00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
-IV="0102030405060708090a0b0c0d0e0f10"
-echo -n "whoami" | openssl enc -aes-256-cbc -a -K $KEY -iv $IV | ncat <IP_DO_SERVIDOR> 4444
+sudo apt install libssl-dev libcjson-dev netcat
 ```
 
 ---
 
-## 📌 English
+## 🔑 Generate RSA Keys
 
-### ⚙️ How it works:
-1. Client encrypts a command using AES-256-CBC (base64 output).
-2. Server receives, decrypts, and executes the command.
-3. The output is returned via TCP.
-
-### 🔐 Parameters:
-- **Key (KEY):** `00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff`
-- **IV:** `0102030405060708090a0b0c0d0e0f10`
-- **Port:** `4444`
-
-### ▶️ Running the server:
 ```bash
-gcc aes_server.c -o server
+openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+---
+
+## 🛠️ Compilation
+
+```bash
+gcc client.c -o client -lcrypto
+gcc server.c -o server -lcrypto -lcjson
+```
+
+---
+
+## 🚀 Usage
+
+### On the server:
+
+```bash
 ./server
 ```
 
-### 💻 Client (Linux):
+### On the client:
+
 ```bash
-KEY="00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
-IV="0102030405060708090a0b0c0d0e0f10"
-echo -n "whoami" | openssl enc -aes-256-cbc -a -K $KEY -iv $IV | ncat <SERVER_IP> 4444
+./client
+```
+
+Example input:
+
+```bash
+ls -la
 ```
 
 ---
 
-## 📌 العربية
+## 🧱 File Structure
 
-### ⚙️ كيف يعمل:
-1. يقوم العميل بتشفير الأمر باستخدام AES-256-CBC (بصيغة base64).
-2. يستقبل الخادم الأمر، ويفك تشفيره، ثم ينفذه.
-3. يتم إرسال الناتج عبر اتصال TCP إلى العميل.
+- `client.c` — Secure client using hybrid encryption  
+- `server.c` — Secure server that decrypts and executes commands  
+- `public.pem` — Public RSA key used by the client  
+- `private.pem` — Private RSA key used by the server  
 
-### 🔐 المعلمات:
-- **المفتاح (KEY):** `00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff`
-- **IV:** `0102030405060708090a0b0c0d0e0f10`
-- **المنفذ (Port):** `4444`
+---
 
-### ▶️ تشغيل الخادم:
+## ⚠️ Legal Disclaimer
+
+> This project is intended **for educational and research purposes only**.  
+> Do not use this code for unauthorized access, attack automation, or production systems.  
+> You are solely responsible for how you use it.
+
+---
+
+## 👨‍💻 Author
+
+**Rafael Medeiros**  
+Maintained by [alby.technology](https://alby.technology)
+
+---
+
+# 🇧🇷 Projeto de Comunicação Segura — Alby Protect
+
+Este projeto demonstra uma comunicação segura entre cliente e servidor usando **criptografia híbrida (RSA + AES)** via socket TCP puro.
+
+---
+
+## 🔧 Objetivo
+
+Executar comandos criptografados com:
+
+- Criptografia simétrica (**AES-256-CBC**)  
+- Criptografia assimétrica (**RSA 2048**)  
+- Comunicação via sockets  
+- Troca de dados em JSON  
+- Uso da OpenSSL em C  
+
+---
+
+## 📦 Requisitos
+
+**Instale as dependências:**
+
 ```bash
-gcc aes_server.c -o الخادم
-./الخادم
-```
-
-### 💻 العميل (لينكس):
-```bash
-KEY="00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
-IV="0102030405060708090a0b0c0d0e0f10"
-echo -n "whoami" | openssl enc -aes-256-cbc -a -K $KEY -iv $IV | ncat <IP_الخادم> 4444
+sudo apt install libssl-dev libcjson-dev netcat
 ```
 
 ---
 
-## ⚠️ AVISO LEGAL | LEGAL DISCLAIMER | ⚠️ إخلاء المسؤولية
+## 🔑 Gerar as Chaves RSA
 
-### 🇧🇷 Português
-Este projeto é fornecido **exclusivamente para fins educacionais** e de **pesquisa em segurança cibernética**.  
-Ele deve ser utilizado **somente em ambientes controlados**, como laboratórios, máquinas virtuais ou redes isoladas.  
-**Nunca execute este código em sistemas reais sem autorização explícita do proprietário.**  
-O autor **não se responsabiliza por qualquer uso indevido** desta ferramenta.
-
-### 🇺🇸 English
-This project is provided **for educational and cybersecurity research purposes only**.  
-It is intended to be used **only in controlled environments**, such as labs, virtual machines, or isolated networks.  
-**Do not run this code on real systems without explicit permission from the owner.**  
-The author **is not responsible for any misuse** of this tool.
-
-### 🇸🇦 العربية
-يُقدَّم هذا المشروع **لأغراض تعليمية وبحثية فقط** في مجال الأمن السيبراني.  
-يُمنع استخدامه إلا في **بيئات معزولة ومسيطر عليها** مثل المختبرات أو الأجهزة الافتراضية.  
-**لا يجوز تشغيل هذا الكود على أنظمة حقيقية دون إذن صريح من مالك النظام.**  
-المؤلف **غير مسؤول عن أي استخدام خاطئ** لهذه الأداة.
+```bash
+openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -in private.pem -pubout -out public.pem
+```
 
 ---
 
-## 👤 Autor
+## 🛠️ Compilar
 
-Desenvolvido por **Rafael Medeiros**  
-🌐 [alby.technology](https://alby.technology)  
-🇧🇷 🇦🇪
+```bash
+gcc client.c -o client -lcrypto
+gcc server.c -o server -lcrypto -lcjson
+```
+
+---
+
+## 🚀 Execução
+
+### Servidor:
+
+```bash
+./server
+```
+
+### Cliente:
+
+```bash
+./client
+```
+
+Exemplo de comando:
+
+```bash
+ls -la
+```
+
+---
+
+## 📁 Estrutura dos Arquivos
+
+- `client.c` — Cliente com criptografia híbrida  
+- `server.c` — Servidor que decifra e executa os comandos  
+- `public.pem` — Chave pública RSA usada pelo cliente  
+- `private.pem` — Chave privada RSA usada pelo servidor  
+
+---
+
+## ⚠️ Aviso Legal
+
+> Este projeto é **exclusivamente para fins educacionais e de pesquisa**.  
+> Não utilize este código para acessos não autorizados ou em ambientes de produção.  
+> O uso indevido é de responsabilidade exclusiva do usuário.
+
+---
+
+## 👨‍💻 Autor
+
+**Rafael Medeiros**  
+Mantido por [alby.technology](https://alby.technology)
+
+---
+
+# 🇸🇦 ملف README - مشروع الاتصال الآمن — Alby Protect
+
+يعرض هذا المشروع نظام اتصال آمن بين العميل والخادم باستخدام **تشفير هجين (RSA + AES)** عبر بروتوكول TCP.
+
+---
+
+## 🎯 الهدف
+
+تنفيذ أوامر آمنة باستخدام:
+
+- تشفير متماثل (**AES-256-CBC**)  
+- تشفير غير متماثل (**RSA 2048**)  
+- الاتصال عبر TCP sockets  
+- تبادل بيانات بتنسيق JSON  
+- استخدام مكتبة OpenSSL بلغة C  
+
+---
+
+## 🧰 المتطلبات
+
+**لتثبيت الحزم المطلوبة:**
+
+```bash
+sudo apt install libssl-dev libcjson-dev netcat
+```
+
+---
+
+## 🔐 توليد المفاتيح RSA
+
+```bash
+openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
+openssl rsa -in private.pem -pubout -out public.pem
+```
+
+---
+
+## ⚙️ الترجمة
+
+```bash
+gcc client.c -o client -lcrypto
+gcc server.c -o server -lcrypto -lcjson
+```
+
+---
+
+## 🚀 الاستخدام
+
+### على الخادم:
+
+```bash
+./server
+```
+
+### على العميل:
+
+```bash
+./client
+```
+
+مثال على الأمر:
+
+```bash
+ls -la
+```
+
+---
+
+## 🗂️ هيكل الملفات
+
+- `client.c` — عميل يستخدم تشفيرًا هجينًا  
+- `server.c` — خادم يفك التشفير وينفذ الأوامر  
+- `public.pem` — المفتاح العام المستخدم من قبل العميل  
+- `private.pem` — المفتاح الخاص المستخدم من قبل الخادم  
+
+---
+
+## ⚠️ تنبيه قانوني
+
+> هذا المشروع مخصص **لأغراض تعليمية وبحثية فقط**.  
+> لا يجوز استخدامه للوصول غير المصرح به أو في بيئات الإنتاج.  
+> المستخدم يتحمل كامل المسؤولية عن أي استخدام غير مناسب.
+
+---
+
+## 👨‍💻 المؤلف
+
+**رافاييل ميديروس**  
+تم تطوير المشروع بواسطة [alby.technology](https://alby.technology)
