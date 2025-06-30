@@ -21,7 +21,7 @@ Enable encrypted command execution over TCP using:
 **Install dependencies:**
 
 ```bash
-sudo apt install libssl-dev libcjson-dev netcat
+sudo apt install libssl-dev libcjson-dev
 ```
 
 ---
