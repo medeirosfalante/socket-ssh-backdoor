@@ -107,6 +107,16 @@ int main() {
         int encrypted_len = RSA_public_encrypt(sizeof(key_iv), key_iv, encrypted_key_iv, rsa_pub, RSA_PKCS1_OAEP_PADDING);
         RSA_free(rsa_pub);
 
+
+          // Codifica chave
+        char *keyblob_b64 = base64_encode(encrypted_key_iv, encrypted_len);
+
+        // Monta JSON
+        char json[4096];
+        snprintf(json, sizeof(json),
+                 "{\n  \"keyblob\": \"%s\",\n  \"payload\": \"%s\"\n}\n",
+                 keyblob_b64, payload_b64);
+
       
 
     }
