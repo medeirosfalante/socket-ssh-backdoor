@@ -16,6 +16,25 @@
 
 #define PORT 4444
 
+
+
+// Função para decodificar base64
+unsigned char *base64_decode(const char *input, int *len) {
+    BIO *b64, *bmem;
+    int input_len = strlen(input);
+    unsigned char *buffer = malloc(input_len);
+    memset(buffer, 0, input_len);
+
+    b64 = BIO_new(BIO_f_base64());
+    bmem = BIO_new_mem_buf((void *)input, input_len);
+    bmem = BIO_push(b64, bmem);
+    BIO_set_flags(bmem, BIO_FLAGS_BASE64_NO_NL);
+    *len = BIO_read(bmem, buffer, input_len);
+    BIO_free_all(bmem);
+
+    return buffer;
+}
+
 // Chave e IV fixos em hexadecimal (AES-256-CBC)
 #define KEY_HEX "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
 #define IV_HEX  "0102030405060708090a0b0c0d0e0f10"
