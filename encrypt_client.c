@@ -10,7 +10,8 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 
-char *base64_encode(const unsigned char *input, int length) {
+char *base64_encode(const unsigned char *input, int length)
+{
     BIO *bmem, *b64;
     BUF_MEM *bptr;
 
@@ -30,29 +31,34 @@ char *base64_encode(const unsigned char *input, int length) {
     return buff;
 }
 
-int main() {
+int main()
+{
     int sock = 0;
     struct sockaddr_in serv_addr;
     char message[1024];
 
     // Criar socket
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
         printf("Erro na criação do socket\n");
         return -1;
     }
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(8080);
 
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0)
+    {
         printf("Endereço inválido\n");
         return -1;
     }
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {
         printf("Erro na conexão\n");
         return -1;
     }
 
-    while (1) {
+    while (1)
+    {
         printf("Escreva a mensagem: ");
         fgets(message, sizeof(message), stdin);
         if (strcmp(message, "exit\n") == 0)
@@ -63,9 +69,6 @@ int main() {
         RAND_bytes(aes_key, sizeof(aes_key));
         RAND_bytes(aes_iv, sizeof(aes_iv));
 
-
-
-        
         // Criptografa comando
         EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
         unsigned char ciphertext[1024];
@@ -77,23 +80,20 @@ int main() {
         ciphertext_len += len;
         EVP_CIPHER_CTX_free(ctx);
 
-
-
-
-
-
-          // Codifica payload
+        // Codifica payload
         char *payload_b64 = base64_encode(ciphertext, ciphertext_len);
 
         // Lê chave pública RSA
         FILE *pubkey_file = fopen("public.pem", "r");
-        if (!pubkey_file) {
+        if (!pubkey_file)
+        {
             perror("Erro ao abrir public.pem");
             return -1;
         }
         RSA *rsa_pub = PEM_read_RSA_PUBKEY(pubkey_file, NULL, NULL, NULL);
         fclose(pubkey_file);
-        if (!rsa_pub) {
+        if (!rsa_pub)
+        {
             perror("Erro ao carregar chave pública");
             return -1;
         }
@@ -107,8 +107,7 @@ int main() {
         int encrypted_len = RSA_public_encrypt(sizeof(key_iv), key_iv, encrypted_key_iv, rsa_pub, RSA_PKCS1_OAEP_PADDING);
         RSA_free(rsa_pub);
 
-
-          // Codifica chave
+        // Codifica chave
         char *keyblob_b64 = base64_encode(encrypted_key_iv, encrypted_len);
 
         // Monta JSON
@@ -117,8 +116,15 @@ int main() {
                  "{\n  \"keyblob\": \"%s\",\n  \"payload\": \"%s\"\n}\n",
                  keyblob_b64, payload_b64);
 
-      
+        send(sock, json, strlen(json), 0);
 
+        free(payload_b64);
+        free(keyblob_b64);
+
+        // Recebe resposta
+        char response[2048] = {0};
+        read(sock, response, sizeof(response));
+        printf("Servidor respondeu:\n%s\n", response);
     }
 
     close(sock);
