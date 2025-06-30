@@ -63,6 +63,22 @@ int main() {
         RAND_bytes(aes_key, sizeof(aes_key));
         RAND_bytes(aes_iv, sizeof(aes_iv));
 
+
+
+        
+        // Criptografa comando
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        unsigned char ciphertext[1024];
+        int len, ciphertext_len;
+        EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, aes_key, aes_iv);
+        EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char *)message, strlen(message));
+        ciphertext_len = len;
+        EVP_EncryptFinal_ex(ctx, ciphertext + len, &len);
+        ciphertext_len += len;
+        EVP_CIPHER_CTX_free(ctx);
+
+      
+
     }
 
     close(sock);
