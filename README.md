@@ -1,4 +1,4 @@
-# 🔐 Secure Communication Project — Alby Protect
+# 🔐 Secure Communication Project
 
 This project demonstrates a secure communication system between client and server using **hybrid encryption (RSA + AES)** over a raw TCP socket.
 
@@ -8,10 +8,10 @@ This project demonstrates a secure communication system between client and serve
 
 Enable encrypted command execution over TCP using:
 
-- Symmetric encryption (**AES-256-CBC**)
-- Asymmetric encryption (**RSA 2048**)
-- Socket communication
-- JSON messaging
+- Symmetric encryption (**AES-256-CBC**)  
+- Asymmetric encryption (**RSA 2048**)  
+- Socket communication  
+- JSON messaging  
 - OpenSSL + C
 
 ---
@@ -90,7 +90,7 @@ Maintained by [alby.technology](https://alby.technology)
 
 ---
 
-# 🇧🇷 Projeto de Comunicação Segura — Alby Protect
+# 🇧🇷 Projeto de Comunicação Segura
 
 Este projeto demonstra uma comunicação segura entre cliente e servidor usando **criptografia híbrida (RSA + AES)** via socket TCP puro.
 
@@ -182,7 +182,7 @@ Mantido por [alby.technology](https://alby.technology)
 
 ---
 
-# 🇸🇦 ملف README - مشروع الاتصال الآمن — Alby Protect
+# 🇸🇦 ملف README - مشروع الاتصال الآمن
 
 يعرض هذا المشروع نظام اتصال آمن بين العميل والخادم باستخدام **تشفير هجين (RSA + AES)** عبر بروتوكول TCP.
 
@@ -262,8 +262,8 @@ ls -la
 ## ⚠️ تنبيه قانوني
 
 > هذا المشروع مخصص **لأغراض تعليمية وبحثية فقط**.  
-> لا يجوز استخدامه للوصول غير المصرح به أو في بيئات الإنتاج.  
-> المستخدم يتحمل كامل المسؤولية عن أي استخدام غير مناسب.
+> لا تستخدم هذا الكود في بيئات الإنتاج أو للوصول غير المصرح به.  
+> أي استخدام خاطئ هو على مسؤوليتك الخاصة.
 
 ---
 
