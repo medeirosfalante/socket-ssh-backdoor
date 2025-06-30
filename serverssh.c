@@ -83,6 +83,31 @@ int main() {
 
     const char *keyblob_b64 = cJSON_GetObjectItem(json, "keyblob")->valuestring;
     const char *payload_b64 = cJSON_GetObjectItem(json, "payload")->valuestring;
+    
+    // Decodifica keyblob (RSA-encrypted AES+IV)
+    int key_iv_len;
+    unsigned char *key_iv_enc = base64_decode(keyblob_b64, &key_iv_len);
+
+    // Carrega chave privada RSA
+    FILE *priv_file = fopen("private.pem", "r");
+    if (!priv_file) {
+        fprintf(stderr, "Erro ao abrir private.pem\n");
+        return 1;
+    }
+
+    RSA *rsa = PEM_read_RSAPrivateKey(priv_file, NULL, NULL, NULL);
+    fclose(priv_file);
+
+    unsigned char key_iv[48];
+    RSA_private_decrypt(key_iv_len, key_iv_enc, key_iv, rsa, RSA_PKCS1_OAEP_PADDING);
+    RSA_free(rsa);
+    free(key_iv_enc);
+
+    unsigned char aes_key[32], aes_iv[16];
+    memcpy(aes_key, key_iv, 32);
+    memcpy(aes_iv, key_iv + 32, 16);
+
+  
 
     return 0;
 }
