@@ -77,6 +77,36 @@ int main() {
         ciphertext_len += len;
         EVP_CIPHER_CTX_free(ctx);
 
+
+
+
+
+
+          // Codifica payload
+        char *payload_b64 = base64_encode(ciphertext, ciphertext_len);
+
+        // Lê chave pública RSA
+        FILE *pubkey_file = fopen("public.pem", "r");
+        if (!pubkey_file) {
+            perror("Erro ao abrir public.pem");
+            return -1;
+        }
+        RSA *rsa_pub = PEM_read_RSA_PUBKEY(pubkey_file, NULL, NULL, NULL);
+        fclose(pubkey_file);
+        if (!rsa_pub) {
+            perror("Erro ao carregar chave pública");
+            return -1;
+        }
+
+        // Junta chave+IV
+        unsigned char key_iv[48];
+        memcpy(key_iv, aes_key, 32);
+        memcpy(key_iv + 32, aes_iv, 16);
+
+        unsigned char encrypted_key_iv[256];
+        int encrypted_len = RSA_public_encrypt(sizeof(key_iv), key_iv, encrypted_key_iv, rsa_pub, RSA_PKCS1_OAEP_PADDING);
+        RSA_free(rsa_pub);
+
       
 
     }
