@@ -10,9 +10,6 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 
-
-
-
 char *base64_encode(const unsigned char *input, int length) {
     BIO *bmem, *b64;
     BUF_MEM *bptr;
@@ -31,4 +28,43 @@ char *base64_encode(const unsigned char *input, int length) {
     buff[bptr->length] = 0;
     BIO_free_all(b64);
     return buff;
+}
+
+int main() {
+    int sock = 0;
+    struct sockaddr_in serv_addr;
+    char message[1024];
+
+    // Criar socket
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("Erro na criação do socket\n");
+        return -1;
+    }
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(8080);
+
+    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
+        printf("Endereço inválido\n");
+        return -1;
+    }
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        printf("Erro na conexão\n");
+        return -1;
+    }
+
+    while (1) {
+        printf("Escreva a mensagem: ");
+        fgets(message, sizeof(message), stdin);
+        if (strcmp(message, "exit\n") == 0)
+            break;
+
+        // Gera chave AES e IV
+        unsigned char aes_key[32], aes_iv[16];
+        RAND_bytes(aes_key, sizeof(aes_key));
+        RAND_bytes(aes_iv, sizeof(aes_iv));
+
+    }
+
+    close(sock);
+    return 0;
 }
