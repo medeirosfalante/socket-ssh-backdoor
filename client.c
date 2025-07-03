@@ -3,7 +3,10 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+
 #include <openssl/rand.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
@@ -31,31 +34,43 @@ char *base64_encode(const unsigned char *input, int length)
     return buff;
 }
 
+SSL_CTX *init_client_ctx()
+{
+    SSL_load_error_strings();
+    OpenSSL_add_ssl_algorithms();
+
+    const SSL_METHOD *method = TLS_client_method();
+    SSL_CTX *ctx = SSL_CTX_new(method);
+    if (!ctx)
+    {
+        perror("Erro ao criar contexto SSL");
+        ERR_print_errors_fp(stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    return ctx;
+}
+
 int main()
 {
-    int sock = 0;
-    struct sockaddr_in serv_addr;
+    int sock;
+    struct sockaddr_in server_addr;
     char message[1024];
 
-    // Criar socket
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        perror("Erro na criação do socket");
-        return 1;
-    }
+    SSL_CTX *ctx = init_client_ctx();
+    SSL *ssl = SSL_new(ctx);
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(8080);
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(8080);
+    inet_pton(AF_INET, "127.0.0.1", &server_addr.sin_addr);
 
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0)
-    {
-        perror("Endereço inválido");
-        return 1;
-    }
+    connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    SSL_set_fd(ssl, sock);
 
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    if (SSL_connect(ssl) <= 0)
     {
-        perror("Erro na conexão");
+        ERR_print_errors_fp(stderr);
         return 1;
     }
 
@@ -67,13 +82,10 @@ int main()
             break;
         }
 
-        // Remover newline
         message[strcspn(message, "\n")] = '\0';
-
         if (strcmp(message, "exit") == 0)
             break;
 
-        // Gerar chave AES e IV
         unsigned char aes_key[32], aes_iv[16];
         if (RAND_bytes(aes_key, sizeof(aes_key)) != 1 || RAND_bytes(aes_iv, sizeof(aes_iv)) != 1)
         {
@@ -81,22 +93,19 @@ int main()
             continue;
         }
 
-        // Criptografar comando
-        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        EVP_CIPHER_CTX *ctx_enc = EVP_CIPHER_CTX_new();
         unsigned char ciphertext[1024];
         int len, ciphertext_len;
 
-        EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, aes_key, aes_iv);
-        EVP_EncryptUpdate(ctx, ciphertext, &len, (unsigned char *)message, strlen(message));
+        EVP_EncryptInit_ex(ctx_enc, EVP_aes_256_cbc(), NULL, aes_key, aes_iv);
+        EVP_EncryptUpdate(ctx_enc, ciphertext, &len, (unsigned char *)message, strlen(message));
         ciphertext_len = len;
-        EVP_EncryptFinal_ex(ctx, ciphertext + len, &len);
+        EVP_EncryptFinal_ex(ctx_enc, ciphertext + len, &len);
         ciphertext_len += len;
-        EVP_CIPHER_CTX_free(ctx);
+        EVP_CIPHER_CTX_free(ctx_enc);
 
-        // Codificar payload em Base64
         char *payload_b64 = base64_encode(ciphertext, ciphertext_len);
 
-        // Ler chave pública RSA
         FILE *pubkey_file = fopen("public.pem", "r");
         if (!pubkey_file)
         {
@@ -114,7 +123,6 @@ int main()
             break;
         }
 
-        // Concatenar chave e IV (32 + 16 bytes)
         unsigned char key_iv[48];
         memcpy(key_iv, aes_key, 32);
         memcpy(key_iv + 32, aes_iv, 16);
@@ -130,31 +138,32 @@ int main()
             continue;
         }
 
-        // Codificar chave criptografada
         char *keyblob_b64 = base64_encode(encrypted_key_iv, encrypted_len);
 
-        // Montar JSON
         char json[4096];
         snprintf(json, sizeof(json),
                  "{\n  \"keyblob\": \"%s\",\n  \"payload\": \"%s\"\n}\n",
                  keyblob_b64, payload_b64);
 
-        // Enviar
-        send(sock, json, strlen(json), 0);
+        SSL_write(ssl, json, strlen(json));
 
-        // Receber resposta
         char response[2048] = {0};
-        int bytes = read(sock, response, sizeof(response) - 1);
+        int bytes = SSL_read(ssl, response, sizeof(response) - 1);
         if (bytes > 0)
         {
             response[bytes] = '\0';
-            printf("Servidor respondeu:\n%s\n", response);
+            printf("Resposta do servidor:\n%s\n", response);
         }
 
         free(payload_b64);
         free(keyblob_b64);
     }
 
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
     close(sock);
+    SSL_CTX_free(ctx);
+    EVP_cleanup();
+
     return 0;
 }

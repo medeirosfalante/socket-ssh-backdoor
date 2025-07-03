@@ -2,3 +2,5 @@ client
 server
 public.pem
 private.pem
+server.crt
+server.key

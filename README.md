@@ -31,6 +31,9 @@ sudo apt install libssl-dev libcjson-dev
 ```bash
 openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
 openssl rsa -in private.pem -pubout -out public.pem
+openssl genrsa -out server.key 2048
+openssl req -new -x509 -key server.key -out server.crt -days 365
+
 ```
 
 ---
@@ -38,8 +41,8 @@ openssl rsa -in private.pem -pubout -out public.pem
 ## 🛠️ Compilation
 
 ```bash
-gcc client.c -o client -lcrypto
-gcc server.c -o server -lcrypto -lcjson
+gcc client.c -o client -lssl -lcrypto
+gcc server.c -o server -lssl -lcrypto -lcjson
 ```
 
 ---
@@ -123,6 +126,8 @@ sudo apt install libssl-dev libcjson-dev netcat
 ```bash
 openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
 openssl rsa -in private.pem -pubout -out public.pem
+openssl genrsa -out server.key 2048
+openssl req -new -x509 -key server.key -out server.crt -days 365
 ```
 
 ---
@@ -130,8 +135,8 @@ openssl rsa -in private.pem -pubout -out public.pem
 ## 🛠️ Compilar
 
 ```bash
-gcc client.c -o client -lcrypto
-gcc server.c -o server -lcrypto -lcjson
+gcc client.c -o client -lssl -lcrypto
+gcc server.c -o server -lssl -lcrypto -lcjson
 ```
 
 ---
@@ -215,6 +220,8 @@ sudo apt install libssl-dev libcjson-dev netcat
 ```bash
 openssl genpkey -algorithm RSA -out private.pem -pkeyopt rsa_keygen_bits:2048
 openssl rsa -in private.pem -pubout -out public.pem
+openssl genrsa -out server.key 2048
+openssl req -new -x509 -key server.key -out server.crt -days 365
 ```
 
 ---
@@ -222,8 +229,8 @@ openssl rsa -in private.pem -pubout -out public.pem
 ## ⚙️ الترجمة
 
 ```bash
-gcc client.c -o client -lcrypto
-gcc server.c -o server -lcrypto -lcjson
+gcc client.c -o client -lssl -lcrypto
+gcc server.c -o server -lssl -lcrypto -lcjson
 ```
 
 ---
@@ -255,7 +262,8 @@ ls -la
 - `client.c` — عميل يستخدم تشفيرًا هجينًا  
 - `server.c` — خادم يفك التشفير وينفذ الأوامر  
 - `public.pem` — المفتاح العام المستخدم من قبل العميل  
-- `private.pem` — المفتاح الخاص المستخدم من قبل الخادم  
+- `private.pem` — المفتاح الخاص المستخدم من قبل الخادم 
+ 
 
 ---
 
